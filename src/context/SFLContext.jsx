@@ -2,8 +2,9 @@
  * ============================================================================
  * SFL PROVIDER (Penyedia State & Integrasi API Global)
  * ============================================================================
- * Mengelola state global aplikasi dan menghubungkannya dengan Sunflower Land API
- * melalui layanan Cloudflare Worker Proxy pemain.
+ * Mengelola state global aplikasi dan menghubungkannya dengan Sunflower Land API.
+ * - Tanpa storage cache untuk data API (data selalu fresh saat di-fetch baru).
+ * - Tidak ada pemanggilan fetch otomatis saat mount; hanya saat user mengklik Open/Refresh.
  * ============================================================================
  */
 
@@ -14,10 +15,10 @@ import { fetchFarmData } from '../services/sflApi';
 export function SFLProvider({ children }) {
   // State Farm ID aktif
   const [farmId, setFarmId] = useState(() => {
-    return localStorage.getItem('sfl_farm_id') || '121500';
+    return localStorage.getItem('sfl_farm_id') || '';
   });
 
-  // State data mentah dari API SFL
+  // State data mentah dari API SFL (TANPA cache localStorage)
   const [apiFarmData, setApiFarmData] = useState(null);
 
   // State status loading saat mengambil data API
@@ -30,8 +31,8 @@ export function SFLProvider({ children }) {
   const [playerProfile, setPlayerProfile] = useState(() => {
     const saved = localStorage.getItem('sfl_player_profile');
     return saved ? JSON.parse(saved) : {
-      level: 83,
-      sflBalance: 1250.42,
+      level: 1,
+      sflBalance: 0,
       totalPlots: 22,
     };
   });
@@ -43,7 +44,8 @@ export function SFLProvider({ children }) {
   });
 
   /**
-   * Fungsi untuk mengambil data farm dari API Sunflower Land via Proxy Worker
+   * Fungsi untuk mengambil data farm dari API Sunflower Land via Proxy Worker.
+   * Hanya dipanggil saat user melakukan aksi manual (klik Open / Refresh).
    */
   const loadFarmData = useCallback(async (targetId) => {
     if (!targetId) return;
@@ -68,14 +70,11 @@ export function SFLProvider({ children }) {
     }
   }, []);
 
-  // Load data awal saat mount pertama kali
+  // Sinkronisasi farmId ke localStorage
   useEffect(() => {
-    loadFarmData(farmId);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Sinkronisasi ke localStorage
-  useEffect(() => {
-    localStorage.setItem('sfl_farm_id', farmId);
+    if (farmId) {
+      localStorage.setItem('sfl_farm_id', farmId);
+    }
   }, [farmId]);
 
   useEffect(() => {
@@ -86,6 +85,9 @@ export function SFLProvider({ children }) {
     localStorage.setItem('sfl_simulations', JSON.stringify(savedSimulations));
   }, [savedSimulations]);
 
+  /**
+   * Fungsi updateFarmId dan fetch data manual oleh user
+   */
   const updateFarmId = (newId) => {
     setFarmId(newId);
     loadFarmData(newId);
