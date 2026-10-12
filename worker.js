@@ -2,33 +2,18 @@
  * ============================================================================
  * SFL COMMUNITY API PROXY WORKER (Cloudflare Worker)
  * ============================================================================
- * Membaca environment variables dari Cloudflare:
- * - SFL_API_BASE (Base URL API SFL)
- * - ALLOW_ORIGINS & ALLOW_ORIGINS_PUBLISH (Pengaturan CORS)
- * - SFL_API_KEY (Secret API Key SFL)
+ * Proxy worker yang meneruskan request ke Sunflower Land API dan menyertakan 
+ * header CORS "*" serta x-api-key secara aman.
  * ============================================================================
  */
 
 export default {
   async fetch(request, env, _ctx) {
-    const origin = request.headers.get("Origin") || "*";
-    
-    // Kumpulkan daftar origin yang diizinkan dari environment variables Cloudflare
-    const allowedOrigins = [
-      env.ALLOW_ORIGINS,
-      env.ALLOW_ORIGINS_PUBLISH,
-      "https://ais-dev-5vgrrlfooqsvamwa3hqfkv-812352267250.asia-southeast1.run.app",
-      "https://ais-pre-5vgrrlfooqsvamwa3hqfkv-812352267250.asia-southeast1.run.app"
-    ].filter(Boolean);
-
-    // Tentukan apakah origin request diizinkan
-    const corsOrigin = allowedOrigins.some(o => origin.includes(o)) ? origin : "*";
-
-    // 1. Tangani preflight CORS (OPTIONS)
+    // 1. Tangani preflight CORS (OPTIONS) untuk semua origin
     if (request.method === "OPTIONS") {
       return new Response(null, {
         headers: {
-          "Access-Control-Allow-Origin": corsOrigin,
+          "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Methods": "GET, POST, OPTIONS, HEAD",
           "Access-Control-Allow-Headers": "Content-Type, x-api-key, Authorization",
         },
@@ -38,11 +23,11 @@ export default {
     try {
       const url = new URL(request.url);
       
-      // Gunakan SFL_API_BASE dari Cloudflare Environment Variables
+      // Ambil base URL dari env atau default ke SFL API
       const apiBase = env.SFL_API_BASE || "https://api.sunflower-land.com";
       const targetUrl = `${apiBase}${url.pathname}${url.search}`;
       
-      // Ambil secret SFL_API_KEY dari Cloudflare
+      // Ambil Secret API Key
       const apiKey = env.SFL_API_KEY || "";
 
       console.log(`[Worker Proxy] Forwarding to: ${targetUrl}`);
@@ -61,8 +46,9 @@ export default {
 
       const response = await fetch(modifiedRequest);
       
+      // Buat response baru dengan menyertakan Access-Control-Allow-Origin: *
       const newHeadersResponse = new Headers(response.headers);
-      newHeadersResponse.set("Access-Control-Allow-Origin", corsOrigin);
+      newHeadersResponse.set("Access-Control-Allow-Origin", "*");
       newHeadersResponse.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, HEAD");
       newHeadersResponse.set("Access-Control-Allow-Headers", "Content-Type, x-api-key, Authorization");
 
@@ -78,7 +64,7 @@ export default {
         status: 500,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": corsOrigin,
+          "Access-Control-Allow-Origin": "*",
         },
       });
     }

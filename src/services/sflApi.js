@@ -2,8 +2,8 @@
  * ============================================================================
  * SFL API SERVICE (Layanan Integrasi API Sunflower Land)
  * ============================================================================
- * Berkomunikasi dengan Sunflower Land Community API melalui Cloudflare Worker Proxy baru:
- * https://sfl.tjah.workers.dev
+ * Berkomunikasi dengan Sunflower Land Community API melalui Cloudflare Worker Proxy.
+ * Menyertakan penanganan error dan log detail untuk debugging.
  * ============================================================================
  */
 
@@ -28,24 +28,27 @@ export async function fetchFarmData(farmId) {
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[SFL API Error Response]:', errorText);
+      
       if (response.status === 404) {
         throw new Error('Farm tidak ditemukan (Farm ID tidak valid).');
       }
       if (response.status === 401) {
-        throw new Error('API Key tidak valid pada Proxy Worker.');
+        throw new Error('API Key tidak valid atau kedaluwarsa (401 Unauthorized).');
       }
       if (response.status === 429) {
-        throw new Error('Terlalu banyak permintaan (Rate limited). Coba beberapa saat lagi.');
+        throw new Error('Terlalu banyak permintaan (Rate limited 429).');
       }
-      throw new Error(`Gagal mengambil data farm (HTTP ${response.status})`);
+      throw new Error(`Error ${response.status}: ${errorText || response.statusText}`);
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('[SFL API Error]:', error);
+    console.error('[SFL API Error Catch]:', error);
     if (error.message === 'Failed to fetch') {
-      throw new Error('Gagal terhubung (CORS/Network error). Pastikan Cloudflare Worker mengizinkan domain preview AI Studio.');
+      throw new Error('Gagal terhubung (CORS / Network error). Pastikan Worker aktif dan mengizinkan origin.');
     }
     throw error;
   }
