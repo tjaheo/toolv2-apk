@@ -2,12 +2,12 @@
  * ============================================================================
  * SFL API SERVICE (Layanan Integrasi API Sunflower Land)
  * ============================================================================
- * Berkomunikasi dengan Sunflower Land Community API melalui Cloudflare Worker Proxy.
- * Menyertakan penanganan error dan log detail untuk debugging.
+ * Berkomunikasi dengan Sunflower Land Community API melalui Cloudflare Worker Proxy:
+ * https://sfl-proxy.tjah.workers.dev
  * ============================================================================
  */
 
-const PROXY_URL = 'https://sfl.tjah.workers.dev';
+const PROXY_URL = 'https://sfl-proxy.tjah.workers.dev';
 
 /**
  * Mengambil data farm secara real-time berdasarkan Farm ID / NFT ID.
